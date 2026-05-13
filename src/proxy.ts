@@ -1,6 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Routes parents cannot access
+const COACH_ONLY_PATHS = [
+  '/athletes/new',
+  '/athletes',
+  '/squads',
+  '/squad',
+  '/sessions',
+  '/milestones',
+  '/admin',
+]
+
+// Routes only club_admin can access
+const ADMIN_ONLY_PATHS = ['/admin']
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -23,15 +37,42 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-  const isAppRoute = !isAuthRoute && request.nextUrl.pathname !== '/'
+  const path = request.nextUrl.pathname
+  const isAuthRoute = path.startsWith('/auth')
+  const isAppRoute = !isAuthRoute && path !== '/'
 
+  // Not logged in → redirect to login
   if (isAppRoute && !user) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
+  // Already logged in → skip auth pages
   if (isAuthRoute && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // Role-based protection for authenticated users
+  if (user && isAppRoute) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const role = profile?.role
+
+    // Parents can only access /parent and /dashboard
+    if (role === 'parent') {
+      const isAllowedForParent = path.startsWith('/parent') || path === '/dashboard'
+      if (!isAllowedForParent) {
+        return NextResponse.redirect(new URL('/parent', request.url))
+      }
+    }
+
+    // Admin-only paths
+    if (ADMIN_ONLY_PATHS.some(p => path.startsWith(p)) && role !== 'club_admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
   }
 
   return supabaseResponse

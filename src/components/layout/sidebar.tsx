@@ -11,24 +11,44 @@ import {
   Settings,
   LogOut,
   Zap,
+  Shield,
+  Baby,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import type { UserRole } from '@/types'
 
-const navigation = [
+const COACH_NAV = [
   { name: 'Dashboard',  href: '/dashboard',  icon: LayoutDashboard },
   { name: 'Athletes',   href: '/athletes',   icon: Users },
-  { name: 'Squad',      href: '/squad',      icon: CalendarDays },
+  { name: 'Squads',     href: '/squad',      icon: CalendarDays },
   { name: 'Milestones', href: '/milestones', icon: Trophy },
   { name: 'Analytics',  href: '/analytics',  icon: BarChart3 },
   { name: 'Settings',   href: '/settings',   icon: Settings },
 ]
 
-export function Sidebar() {
+const ADMIN_NAV = [
+  ...COACH_NAV,
+  { name: 'Club Admin', href: '/admin', icon: Shield },
+]
+
+const PARENT_NAV = [
+  { name: 'My Child',  href: '/parent',   icon: Baby },
+  { name: 'Settings',  href: '/settings', icon: Settings },
+]
+
+interface Props {
+  role: UserRole
+  userName: string
+}
+
+export function Sidebar({ role, userName }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+
+  const navigation = role === 'club_admin' ? ADMIN_NAV : role === 'parent' ? PARENT_NAV : COACH_NAV
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -67,8 +87,14 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Sign out */}
-      <div className="border-t border-slate-200 p-3">
+      {/* User + sign out */}
+      <div className="border-t border-slate-200 p-3 space-y-1">
+        {userName && (
+          <div className="px-3 py-1.5">
+            <p className="text-xs font-medium text-slate-700 truncate">{userName}</p>
+            <p className="text-xs text-slate-400 capitalize">{role.replace('_', ' ')}</p>
+          </div>
+        )}
         <button
           onClick={handleSignOut}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
