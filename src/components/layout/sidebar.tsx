@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   CalendarDays,
+  Calendar,
   Trophy,
   BarChart3,
   Settings,
@@ -14,6 +15,8 @@ import {
   Shield,
   Baby,
   Dumbbell,
+  Megaphone,
+  HandHeart,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -22,12 +25,15 @@ import type { UserRole } from '@/types'
 import { NotificationBell } from './notification-bell'
 
 const COACH_NAV = [
-  { name: 'Dashboard',  href: '/dashboard',  icon: LayoutDashboard },
-  { name: 'Athletes',   href: '/athletes',   icon: Users },
-  { name: 'Squads',     href: '/squad',      icon: CalendarDays },
-  { name: 'Milestones', href: '/milestones', icon: Trophy },
-  { name: 'Analytics',  href: '/analytics',  icon: BarChart3 },
-  { name: 'Settings',   href: '/settings',   icon: Settings },
+  { name: 'Dashboard',      href: '/dashboard',      icon: LayoutDashboard },
+  { name: 'Athletes',       href: '/athletes',       icon: Users },
+  { name: 'Squads',         href: '/squad',          icon: CalendarDays },
+  { name: 'Calendar',       href: '/calendar',       icon: Calendar },
+  { name: 'Announcements',  href: '/announcements',  icon: Megaphone },
+  { name: 'Volunteering',   href: '/volunteering',   icon: HandHeart },
+  { name: 'Milestones',     href: '/milestones',     icon: Trophy },
+  { name: 'Analytics',      href: '/analytics',      icon: BarChart3 },
+  { name: 'Settings',       href: '/settings',       icon: Settings },
 ]
 
 const ADMIN_NAV = [
@@ -36,13 +42,18 @@ const ADMIN_NAV = [
 ]
 
 const PARENT_NAV = [
-  { name: 'My Child',   href: '/parent',   icon: Baby },
-  { name: 'Settings',   href: '/settings', icon: Settings },
+  { name: 'My Child',       href: '/parent',         icon: Baby },
+  { name: 'Announcements',  href: '/announcements',  icon: Megaphone },
+  { name: 'Calendar',       href: '/calendar',       icon: Calendar },
+  { name: 'Volunteering',   href: '/volunteering',   icon: HandHeart },
+  { name: 'Settings',       href: '/settings',       icon: Settings },
 ]
 
 const ATHLETE_NAV = [
-  { name: 'My Dashboard', href: '/athlete',  icon: Dumbbell },
-  { name: 'Settings',     href: '/settings', icon: Settings },
+  { name: 'My Dashboard',   href: '/athlete',        icon: Dumbbell },
+  { name: 'Announcements',  href: '/announcements',  icon: Megaphone },
+  { name: 'Calendar',       href: '/calendar',       icon: Calendar },
+  { name: 'Settings',       href: '/settings',       icon: Settings },
 ]
 
 interface Props {

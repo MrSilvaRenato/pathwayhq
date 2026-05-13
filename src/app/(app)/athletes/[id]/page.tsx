@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FTEM_PHASES } from '@/types'
 import { formatDate, getAge } from '@/lib/utils'
-import { Trophy, TrendingUp, CalendarDays, StickyNote, UserCheck, ArrowLeft } from 'lucide-react'
+import { Trophy, TrendingUp, CalendarDays, StickyNote, UserCheck, ArrowLeft, CheckSquare, Heart } from 'lucide-react'
 import { FtemProgressBar } from '@/components/dashboard/ftem-progress-bar'
 import { UpdateFtemForm } from '@/components/dashboard/update-ftem-form'
 import { LinkParentForm } from '@/components/dashboard/link-parent-form'
 import { CoachNotes } from '@/components/dashboard/coach-notes'
 import { ClaimAthleteForm } from '@/components/dashboard/claim-athlete-form'
+import { GoalsPanel } from '@/components/athlete/goals-panel'
 import { SPORTS } from '@/types'
 import { ShieldCheck, ShieldAlert } from 'lucide-react'
 
@@ -29,6 +30,8 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
     { data: notes },
     { data: profile },
     { data: claimToken },
+    { data: goals },
+    { data: recentWellness },
   ] = await Promise.all([
     supabase.from('athletes').select('*, squads(name), profiles!athletes_parent_id_fkey(full_name)').eq('id', id).single(),
     supabase.from('ftem_history').select('*').eq('athlete_id', id).order('changed_at', { ascending: false }),
@@ -37,6 +40,8 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
     supabase.from('coach_notes').select('*').eq('athlete_id', id).order('created_at', { ascending: false }),
     supabase.from('profiles').select('id, role, club_id').eq('id', user!.id).single(),
     supabase.from('athlete_claim_tokens').select('claimed_at, email').eq('athlete_id', id).maybeSingle(),
+    supabase.from('goals').select('*').eq('athlete_id', id).order('created_at', { ascending: false }),
+    supabase.from('wellness_logs').select('*').eq('athlete_id', id).order('logged_at', { ascending: false }).limit(7),
   ])
 
   if (!athlete) notFound()
@@ -243,6 +248,68 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
                       {h.note && <span className="text-slate-500 text-xs">{h.note}</span>}
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Goals */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <CheckSquare className="h-4 w-4 text-blue-500" />
+                Goals ({(goals ?? []).filter(g => !g.completed_at).length} active)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GoalsPanel
+                athleteId={athlete.id}
+                currentPhase={athlete.ftem_phase as any}
+                goals={goals ?? []}
+                canAdd={isCoachOrAdmin}
+                clubId={profile?.club_id}
+                userId={profile?.id}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Wellness trend (coach view) */}
+          {isCoachOrAdmin && !!recentWellness?.length && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Heart className="h-4 w-4 text-rose-500" />
+                  Recent wellness
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-slate-600">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="pb-1.5 text-left font-medium">Date</th>
+                        <th className="pb-1.5 text-center font-medium">RPE</th>
+                        <th className="pb-1.5 text-center font-medium">Energy</th>
+                        <th className="pb-1.5 text-center font-medium">Mood</th>
+                        <th className="pb-1.5 text-center font-medium">Sleep</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentWellness.map(w => (
+                        <tr key={w.id} className="border-b border-slate-50">
+                          <td className="py-1.5 text-slate-400">{new Date(w.logged_at + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</td>
+                          <td className="py-1.5 text-center">
+                            <span className={`font-medium ${(w.rpe ?? 0) >= 8 ? 'text-red-500' : (w.rpe ?? 0) >= 5 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                              {w.rpe ?? '—'}
+                            </span>
+                          </td>
+                          <td className="py-1.5 text-center">{['😴','😪','😐','😊','⚡'][((w.energy ?? 1) - 1)] ?? '—'}</td>
+                          <td className="py-1.5 text-center">{['😞','😕','😐','🙂','😄'][((w.mood ?? 1) - 1)] ?? '—'}</td>
+                          <td className="py-1.5 text-center">{w.sleep_hours ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>

@@ -66,9 +66,9 @@ export async function proxy(request: NextRequest) {
       if (blocked) return NextResponse.redirect(new URL('/parent', request.url))
     }
 
-    // Independent athletes: only their own dashboard + settings
+    // Independent athletes: their dashboard + shared club pages
     if (role === 'athlete') {
-      const allowed = path.startsWith('/athlete') || path.startsWith('/settings')
+      const allowed = ['/athlete', '/settings', '/calendar', '/announcements'].some(p => path.startsWith(p))
       if (!allowed) return NextResponse.redirect(new URL('/athlete', request.url))
     }
 

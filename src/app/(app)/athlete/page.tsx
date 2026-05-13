@@ -4,10 +4,12 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FTEM_PHASES, SPORTS } from '@/types'
 import { formatDate, getAge } from '@/lib/utils'
-import { Trophy, TrendingUp, Target, Zap } from 'lucide-react'
+import { Trophy, TrendingUp, Target, Zap, Heart, CheckSquare } from 'lucide-react'
 import { FtemProgressBar } from '@/components/dashboard/ftem-progress-bar'
 import { UpdateFtemForm } from '@/components/dashboard/update-ftem-form'
 import { SelfMilestoneForm } from '@/components/athlete/self-milestone-form'
+import { WellnessLogForm } from '@/components/athlete/wellness-log-form'
+import { GoalsPanel } from '@/components/athlete/goals-panel'
 
 export default async function IndependentAthleteDashboard() {
   const supabase = await createClient()
@@ -29,9 +31,13 @@ export default async function IndependentAthleteDashboard() {
 
   if (!athlete) redirect('/dashboard')
 
-  const [{ data: milestones }, { data: history }] = await Promise.all([
+  const today = new Date().toISOString().split('T')[0]
+
+  const [{ data: milestones }, { data: history }, { data: wellnessToday }, { data: goals }] = await Promise.all([
     supabase.from('milestones').select('*').eq('athlete_id', athlete.id).order('achieved_at', { ascending: false }),
     supabase.from('ftem_history').select('*').eq('athlete_id', athlete.id).order('changed_at', { ascending: false }),
+    supabase.from('wellness_logs').select('*').eq('athlete_id', athlete.id).eq('logged_at', today).maybeSingle(),
+    supabase.from('goals').select('*').eq('athlete_id', athlete.id).order('created_at', { ascending: false }),
   ])
 
   const phase = FTEM_PHASES[athlete.ftem_phase as keyof typeof FTEM_PHASES]
@@ -42,7 +48,7 @@ export default async function IndependentAthleteDashboard() {
   const ageAt2032 = age + yearsTill2032
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-8 max-w-5xl">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">My Dashboard</h1>
@@ -75,8 +81,20 @@ export default async function IndependentAthleteDashboard() {
       )}
 
       <div className="grid grid-cols-3 gap-6">
-        {/* Left: update phase */}
+        {/* Left column */}
         <div className="col-span-1 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Heart className="h-4 w-4 text-rose-500" />
+                Today&apos;s wellness
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WellnessLogForm athleteId={athlete.id} todayLog={wellnessToday} />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">
@@ -102,7 +120,7 @@ export default async function IndependentAthleteDashboard() {
           </Card>
         </div>
 
-        {/* Right: progress */}
+        {/* Right columns */}
         <div className="col-span-2 space-y-4">
           <Card>
             <CardHeader>
@@ -120,7 +138,24 @@ export default async function IndependentAthleteDashboard() {
             </CardContent>
           </Card>
 
-          {/* Phase history */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-blue-500" />
+                My Goals ({goals?.filter(g => !g.completed_at).length ?? 0} active)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GoalsPanel
+                athleteId={athlete.id}
+                currentPhase={athlete.ftem_phase as any}
+                goals={goals ?? []}
+                canAdd={true}
+                userId={user.id}
+              />
+            </CardContent>
+          </Card>
+
           {!!history?.length && (
             <Card>
               <CardHeader><CardTitle className="text-sm">Phase History</CardTitle></CardHeader>
@@ -144,7 +179,6 @@ export default async function IndependentAthleteDashboard() {
             </Card>
           )}
 
-          {/* Milestones */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
