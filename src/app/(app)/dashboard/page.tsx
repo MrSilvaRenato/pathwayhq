@@ -37,7 +37,7 @@ export default async function DashboardPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">
           {/* @ts-ignore clubs is joined */}
-          {profile?.clubs?.name ?? 'Your Club'}
+          {(profile as any)?.clubs?.name ?? profile?.full_name ?? 'Your Club'}
         </h1>
         <p className="mt-1 text-sm text-slate-500">
           Athlete development overview — Brisbane 2032
