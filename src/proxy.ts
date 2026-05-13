@@ -1,12 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Routes parents cannot access
-const COACH_ONLY_PATHS = [
-  '/athletes/new',
+// Routes that parents cannot access (coaches and admins can)
+const PARENT_BLOCKED_PATHS = [
   '/athletes',
-  '/squads',
   '/squad',
+  '/squads',
   '/sessions',
   '/milestones',
   '/admin',
@@ -61,10 +60,10 @@ export async function proxy(request: NextRequest) {
 
     const role = profile?.role
 
-    // Parents can only access /parent and /dashboard
+    // Parents can only access /parent, /dashboard, /settings
     if (role === 'parent') {
-      const isAllowedForParent = path.startsWith('/parent') || path === '/dashboard'
-      if (!isAllowedForParent) {
+      const blocked = PARENT_BLOCKED_PATHS.some(p => path.startsWith(p))
+      if (blocked) {
         return NextResponse.redirect(new URL('/parent', request.url))
       }
     }

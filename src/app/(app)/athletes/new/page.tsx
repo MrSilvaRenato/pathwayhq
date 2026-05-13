@@ -8,17 +8,25 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FTEM_PHASES, type FtemPhase, type Sport } from '@/types'
-import { ArrowLeft } from 'lucide-react'
+import { getAge, parseAgeGroupMax } from '@/lib/utils'
+import { ArrowLeft, AlertTriangle } from 'lucide-react'
 
 const FTEM_PHASE_KEYS = Object.keys(FTEM_PHASES) as FtemPhase[]
+
+interface Squad {
+  id: string
+  name: string
+  age_group: string | null
+}
 
 export default function NewAthletePage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [squads, setSquads] = useState<{ id: string; name: string }[]>([])
+  const [squads, setSquads] = useState<Squad[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [ageWarning, setAgeWarning] = useState('')
 
   const [form, setForm] = useState({
     full_name: '',
@@ -32,11 +40,26 @@ export default function NewAthletePage() {
 
   useEffect(() => {
     async function loadSquads() {
-      const { data } = await supabase.from('squads').select('id, name').order('name')
+      const { data } = await supabase.from('squads').select('id, name, age_group').order('name')
       setSquads(data ?? [])
     }
     loadSquads()
   }, [])
+
+  // Validate age against squad age group whenever either changes
+  useEffect(() => {
+    if (!form.date_of_birth || !form.squad_id) { setAgeWarning(''); return }
+    const squad = squads.find(s => s.id === form.squad_id)
+    if (!squad?.age_group) { setAgeWarning(''); return }
+    const maxAge = parseAgeGroupMax(squad.age_group)
+    if (maxAge === null) { setAgeWarning(''); return }
+    const age = getAge(form.date_of_birth)
+    if (age > maxAge) {
+      setAgeWarning(`This athlete is ${age} years old but ${squad.name} is a ${squad.age_group} squad (max ${maxAge}). You can still save, but please confirm this is correct.`)
+    } else {
+      setAgeWarning('')
+    }
+  }, [form.date_of_birth, form.squad_id, squads])
 
   function update(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -47,18 +70,16 @@ export default function NewAthletePage() {
     setLoading(true)
     setError('')
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('club_id, id')
-      .single()
-
+    const { data: profile } = await supabase.from('profiles').select('club_id, id').single()
     if (!profile) {
       setError('Could not load your profile. Please refresh.')
       setLoading(false)
       return
     }
 
+    const athleteId = crypto.randomUUID()
     const { error: insertError } = await supabase.from('athletes').insert({
+      id: athleteId,
       club_id: profile.club_id,
       full_name: form.full_name,
       date_of_birth: form.date_of_birth,
@@ -76,25 +97,13 @@ export default function NewAthletePage() {
       return
     }
 
-    // Log initial FTEM phase in history
-    const { data: newAthlete } = await supabase
-      .from('athletes')
-      .select('id')
-      .eq('club_id', profile.club_id)
-      .eq('full_name', form.full_name)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (newAthlete) {
-      await supabase.from('ftem_history').insert({
-        athlete_id: newAthlete.id,
-        from_phase: null,
-        to_phase: form.ftem_phase,
-        changed_by: profile.id,
-        note: 'Initial phase on registration',
-      })
-    }
+    await supabase.from('ftem_history').insert({
+      athlete_id: athleteId,
+      from_phase: null,
+      to_phase: form.ftem_phase,
+      changed_by: profile.id,
+      note: 'Initial phase on registration',
+    })
 
     router.push('/athletes')
     router.refresh()
@@ -103,10 +112,7 @@ export default function NewAthletePage() {
   return (
     <div className="p-8 max-w-2xl">
       <div className="mb-6">
-        <Link
-          href="/athletes"
-          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4"
-        >
+        <Link href="/athletes" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4">
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to athletes
         </Link>
@@ -115,11 +121,8 @@ export default function NewAthletePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Personal details */}
         <Card>
-          <CardHeader>
-            <CardTitle>Personal details</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Personal details</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <Input
               id="full_name"
@@ -177,7 +180,6 @@ export default function NewAthletePage() {
                   <option value="other">Other</option>
                 </select>
               </div>
-
               <Input
                 id="joined_club_at"
                 type="date"
@@ -190,11 +192,8 @@ export default function NewAthletePage() {
           </CardContent>
         </Card>
 
-        {/* Squad & FTEM */}
         <Card>
-          <CardHeader>
-            <CardTitle>Development pathway</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Development pathway</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="squad_id" className="text-sm font-medium text-slate-700">
@@ -208,7 +207,9 @@ export default function NewAthletePage() {
               >
                 <option value="">No squad assigned</option>
                 {squads.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.name}{s.age_group ? ` (${s.age_group})` : ''}
+                  </option>
                 ))}
               </select>
               {squads.length === 0 && (
@@ -218,6 +219,14 @@ export default function NewAthletePage() {
                 </p>
               )}
             </div>
+
+            {/* Age-group warning */}
+            {ageWarning && (
+              <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
+                <p className="text-sm text-amber-800">{ageWarning}</p>
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="ftem_phase" className="text-sm font-medium text-slate-700">
@@ -247,9 +256,7 @@ export default function NewAthletePage() {
         )}
 
         <div className="flex gap-3">
-          <Button type="submit" loading={loading}>
-            Add athlete
-          </Button>
+          <Button type="submit" loading={loading}>Add athlete</Button>
           <Link href="/athletes">
             <Button type="button" variant="secondary">Cancel</Button>
           </Link>

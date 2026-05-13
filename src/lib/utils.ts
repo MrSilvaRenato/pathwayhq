@@ -22,6 +22,13 @@ export function getAge(dateOfBirth: string): number {
   return age
 }
 
+// Parse an age-group string like "U18", "U10", "Open", "Senior" into a max age (or null if no restriction).
+export function parseAgeGroupMax(ageGroup: string | null | undefined): number | null {
+  if (!ageGroup) return null
+  const match = ageGroup.match(/[Uu](\d+)/)
+  return match ? parseInt(match[1], 10) : null
+}
+
 export function getInitials(name: string): string {
   return name
     .split(' ')
