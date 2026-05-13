@@ -13,6 +13,7 @@ import {
   Zap,
   Shield,
   Baby,
+  Dumbbell,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -34,8 +35,13 @@ const ADMIN_NAV = [
 ]
 
 const PARENT_NAV = [
-  { name: 'My Child',  href: '/parent',   icon: Baby },
-  { name: 'Settings',  href: '/settings', icon: Settings },
+  { name: 'My Child',   href: '/parent',   icon: Baby },
+  { name: 'Settings',   href: '/settings', icon: Settings },
+]
+
+const ATHLETE_NAV = [
+  { name: 'My Dashboard', href: '/athlete',  icon: Dumbbell },
+  { name: 'Settings',     href: '/settings', icon: Settings },
 ]
 
 interface Props {
@@ -48,7 +54,11 @@ export function Sidebar({ role, userName }: Props) {
   const router = useRouter()
   const supabase = createClient()
 
-  const navigation = role === 'club_admin' ? ADMIN_NAV : role === 'parent' ? PARENT_NAV : COACH_NAV
+  const navigation =
+    role === 'club_admin' ? ADMIN_NAV :
+    role === 'parent'     ? PARENT_NAV :
+    role === 'athlete'    ? ATHLETE_NAV :
+    COACH_NAV
 
   async function handleSignOut() {
     await supabase.auth.signOut()

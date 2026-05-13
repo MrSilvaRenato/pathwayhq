@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { SportSelect } from '@/components/ui/sport-select'
 import { FTEM_PHASES, type FtemPhase, type Sport } from '@/types'
 import { getAge, parseAgeGroupMax } from '@/lib/utils'
 import { ArrowLeft, AlertTriangle } from 'lucide-react'
@@ -159,26 +160,8 @@ export default function NewAthletePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="sport" className="text-sm font-medium text-slate-700">Sport</label>
-                <select
-                  id="sport"
-                  value={form.sport}
-                  onChange={(e) => update('sport', e.target.value)}
-                  className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="soccer">Soccer / Football</option>
-                  <option value="swimming">Swimming</option>
-                  <option value="athletics">Athletics</option>
-                  <option value="gymnastics">Gymnastics</option>
-                  <option value="rowing">Rowing</option>
-                  <option value="cycling">Cycling</option>
-                  <option value="hockey">Hockey</option>
-                  <option value="triathlon">Triathlon</option>
-                  <option value="basketball">Basketball</option>
-                  <option value="netball">Netball</option>
-                  <option value="rugby">Rugby</option>
-                  <option value="other">Other</option>
-                </select>
+                <label className="text-sm font-medium text-slate-700">Sport</label>
+                <SportSelect value={form.sport} onChange={(v) => update('sport', v)} />
               </div>
               <Input
                 id="joined_club_at"

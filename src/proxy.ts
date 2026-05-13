@@ -60,12 +60,16 @@ export async function proxy(request: NextRequest) {
 
     const role = profile?.role
 
-    // Parents can only access /parent, /dashboard, /settings
+    // Parents: blocked from coach routes
     if (role === 'parent') {
       const blocked = PARENT_BLOCKED_PATHS.some(p => path.startsWith(p))
-      if (blocked) {
-        return NextResponse.redirect(new URL('/parent', request.url))
-      }
+      if (blocked) return NextResponse.redirect(new URL('/parent', request.url))
+    }
+
+    // Independent athletes: only their own dashboard + settings
+    if (role === 'athlete') {
+      const allowed = path.startsWith('/athlete') || path.startsWith('/settings')
+      if (!allowed) return NextResponse.redirect(new URL('/athlete', request.url))
     }
 
     // Admin-only paths
