@@ -90,6 +90,9 @@ export default function LandingPage() {
             <span className="text-lg font-bold text-slate-900">PathwayHQ</span>
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/clubs" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+              Find a club
+            </Link>
             <Link href="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">
               Sign in
             </Link>
