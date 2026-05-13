@@ -11,6 +11,9 @@ import { FtemProgressBar } from '@/components/dashboard/ftem-progress-bar'
 import { UpdateFtemForm } from '@/components/dashboard/update-ftem-form'
 import { LinkParentForm } from '@/components/dashboard/link-parent-form'
 import { CoachNotes } from '@/components/dashboard/coach-notes'
+import { ClaimAthleteForm } from '@/components/dashboard/claim-athlete-form'
+import { SPORTS } from '@/types'
+import { ShieldCheck, ShieldAlert } from 'lucide-react'
 
 export default async function AthleteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -25,13 +28,15 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
     { data: attendance },
     { data: notes },
     { data: profile },
+    { data: claimToken },
   ] = await Promise.all([
     supabase.from('athletes').select('*, squads(name), profiles!athletes_parent_id_fkey(full_name)').eq('id', id).single(),
     supabase.from('ftem_history').select('*').eq('athlete_id', id).order('changed_at', { ascending: false }),
     supabase.from('milestones').select('*').eq('athlete_id', id).order('achieved_at', { ascending: false }),
     supabase.from('attendance').select('*, sessions(date, title)').eq('athlete_id', id).order('created_at', { ascending: false }).limit(10),
     supabase.from('coach_notes').select('*').eq('athlete_id', id).order('created_at', { ascending: false }),
-    supabase.from('profiles').select('id, role').eq('id', user!.id).single(),
+    supabase.from('profiles').select('id, role, club_id').eq('id', user!.id).single(),
+    supabase.from('athlete_claim_tokens').select('claimed_at, email').eq('athlete_id', id).maybeSingle(),
   ])
 
   if (!athlete) notFound()
@@ -42,6 +47,9 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
     : null
   const isCoachOrAdmin = profile?.role === 'club_admin' || profile?.role === 'coach'
   const parentName = (athlete as any).profiles?.full_name ?? null
+  const sportMeta = SPORTS.find(s => s.value === athlete.sport)
+  const isClaimed = !!claimToken?.claimed_at
+  const isVerified = (athlete as any).ftem_verified ?? false
 
   return (
     <div className="p-8 max-w-5xl">
@@ -66,8 +74,13 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
             <span className="text-slate-300">·</span>
             <span className="text-sm text-slate-500">Joined {formatDate(athlete.joined_club_at)}</span>
           </div>
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge className={phase?.color}>{athlete.ftem_phase} — {phase?.label}</Badge>
+            {sportMeta && <span className="text-sm text-slate-500">{sportMeta.emoji} {sportMeta.label}{sportMeta.in2032 ? ' ★' : ''}</span>}
+            {isVerified
+              ? <span className="flex items-center gap-1 text-xs text-emerald-600"><ShieldCheck className="h-3 w-3" /> Coach-verified</span>
+              : <span className="flex items-center gap-1 text-xs text-slate-400"><ShieldAlert className="h-3 w-3" /> Unverified phase</span>
+            }
             {parentName && (
               <span className="flex items-center gap-1 text-xs text-slate-500">
                 <UserCheck className="h-3 w-3 text-emerald-500" />
@@ -116,6 +129,24 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
                   athleteId={athlete.id}
                   currentParentId={athlete.parent_id}
                   currentParentName={parentName}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Athlete account claim */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Athlete account</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-slate-500 mb-3">
+                  Give {athlete.full_name} a login so they can see their own progress.
+                </p>
+                <ClaimAthleteForm
+                  athleteId={athlete.id}
+                  clubId={profile!.club_id!}
+                  athleteName={athlete.full_name}
+                  alreadyClaimed={isClaimed}
                 />
               </CardContent>
             </Card>

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import type { UserRole } from '@/types'
+import { NotificationBell } from './notification-bell'
 
 const COACH_NAV = [
   { name: 'Dashboard',  href: '/dashboard',  icon: LayoutDashboard },
@@ -97,12 +98,15 @@ export function Sidebar({ role, userName }: Props) {
         })}
       </nav>
 
-      {/* User + sign out */}
+      {/* User + notifications + sign out */}
       <div className="border-t border-slate-200 p-3 space-y-1">
         {userName && (
-          <div className="px-3 py-1.5">
-            <p className="text-xs font-medium text-slate-700 truncate">{userName}</p>
-            <p className="text-xs text-slate-400 capitalize">{role.replace('_', ' ')}</p>
+          <div className="flex items-center justify-between px-3 py-1.5">
+            <div>
+              <p className="text-xs font-medium text-slate-700 truncate">{userName}</p>
+              <p className="text-xs text-slate-400 capitalize">{role.replace('_', ' ')}</p>
+            </div>
+            <NotificationBell />
           </div>
         )}
         <button

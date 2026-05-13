@@ -44,7 +44,7 @@ export function UpdateFtemForm({ athleteId, currentPhase }: Props) {
 
     const { error: updateError } = await supabase
       .from('athletes')
-      .update({ ftem_phase: phase, ftem_updated_at: new Date().toISOString(), ftem_updated_by: profile.id })
+      .update({ ftem_phase: phase, ftem_updated_at: new Date().toISOString(), ftem_updated_by: profile.id, ftem_verified: true })
       .eq('id', athleteId)
 
     if (updateError) { setError(updateError.message); setLoading(false); return }
