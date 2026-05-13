@@ -60,20 +60,20 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
-    // 1. Create club
-    const { data: club, error: clubError } = await supabase
+    // 1. Create club — no .select() to avoid RLS on read-back before auth
+    const clubId = crypto.randomUUID()
+    const { error: clubError } = await supabase
       .from('clubs')
       .insert({
+        id: clubId,
         name: form.clubName,
         sport: form.sport,
         state: form.state,
         city: form.city,
         subscription_tier: 'free',
       })
-      .select()
-      .single()
 
-    if (clubError || !club) {
+    if (clubError) {
       setError('Failed to create club. Please try again.')
       setLoading(false)
       return
@@ -87,7 +87,7 @@ export default function SignupPage() {
         data: {
           full_name: form.fullName,
           role: 'club_admin',
-          club_id: club.id,
+          club_id: clubId,
         },
       },
     })
